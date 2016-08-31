@@ -6,7 +6,7 @@ library(caret)
 
 frankfurt <- read.csv('frankfurt_final.csv')
 shanghai <- read.csv('shanghai_final.csv')
-manila <- read.csv('manila_final.csv')
+manila <- read.csv('manila_final.csv', sep = ";")
 
 # Visualization
 # Density plot to see farm distribution between regions and positions
@@ -64,7 +64,7 @@ g + geom_density() + facet_grid(Region ~.)
 scaled_shanghai <- fix_dataframes(shanghai)
 scaled_manila <- fix_dataframes(manila)
 
-scaled_tournaments <- rbind(scaled_frankfurt[,1:18], scaled_shanghai[,1:18], scaled_manila)
+scaled_tournaments <- rbind(scaled_frankfurt[,1:18], scaled_shanghai[,1:18], scaled_manila[,1:18])
 # Density plot to see farm distribution between regions and positions
 g <- ggplot(data = scaled_tournaments, aes(x = GPM, color = Region))
 g + geom_density()  + facet_grid(Position ~.)
@@ -128,13 +128,19 @@ results_comparison <- data.frame(results_comparison,player_team_names_test)
 train_invite <- rbind(scaled_frankfurt, scaled_shanghai)
 test_invite <- scaled_manila
 train_invite$Outcome <- as.factor(train_invite$Outcome)
+gbmGrid <-  expand.grid(interaction.depth = c(1, 5, 9),
+                        n.trees = (1:4)*50,
+                        shrinkage = c(0.01, 0.1, 0.2),
+                        n.minobsinnode = 5)
+set.seed(3)
 model2 <- train(Outcome~.,
-                data = train_invite[,-c(1:2)],
+                data = train_invite[,-c(1:2, 14)],
                 method = "gbm",
                 trControl = fitControl,
-                verbose = T)
+                verbose = T,
+                tuneGrid = gbmGrid)
 model2
-preds2 <- predict(model2, test_invite[,-c(1:2)])
+preds2 <- predict(model2, test_invite[,-c(1:2, 14)])
 actual_results_inv <- factor(test_invite$Inv_Status, levels = levels(preds2))
 test_invite$TrueOutcome <- as.integer(actual_results_inv)
 test_invite$PredictedOutcome <- as.integer(preds2)
